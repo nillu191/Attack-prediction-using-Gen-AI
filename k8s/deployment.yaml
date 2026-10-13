@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: securenexus-backend
+  labels:
+    app: securenexus-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: securenexus-backend
+  template:
+    metadata:
+      labels:
+        app: securenexus-backend
+    spec:
+      containers:
+      - name: fastapi
+        image: securenexus/backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: POSTGRES_SERVER
+          value: "postgres-service"
+        - name: ELASTICSEARCH_URL
+          value: "http://elasticsearch-service:9200"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kafka-service:9092"
+        - name: REDIS_URL
+          value: "redis://redis-service:6379/0"
+        - name: TORCHSERVE_URL
+          value: "http://torchserve-service:8080/predictions/anomaly_model"
+      
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: securenexus-celery-worker
+  labels:
+    app: securenexus-worker
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: securenexus-worker
+  template:
+    metadata:
+      labels:
+        app: securenexus-worker
+    spec:
+      containers:
+      - name: celery
+        image: securenexus/celery-worker:latest
+        env:
+        - name: CELERY_BROKER_URL
+          value: "redis://redis-service:6379/0"
+        - name: CELERY_RESULT_BACKEND
+          value: "redis://redis-service:6379/0"
